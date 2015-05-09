@@ -110,8 +110,13 @@ public class Xar {
         Encoding e;
         e = new GZipEncoding();
         supportedEncodings.put(e.getSimpleName(), e);
-        e = new BZip2Encoding();
-        supportedEncodings.put(e.getSimpleName(), e);
+        try {
+            Class.forName("org.itadaki.bzip2.BZip2InputStream");
+            e = new BZip2Encoding();
+            supportedEncodings.put(e.getSimpleName(), e);
+        } catch (ClassNotFoundException ex) {
+            //my class isn't there!
+        }
         e = new NoEncoding();
         supportedEncodings.put(e.getSimpleName(), e);
 
