@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project basedir=".." name="jxar-IDE">
+<project basedir=".." name="nb-IDE">
     <import file="../build.xml"/>
     <target depends="compile" name="debug-nb">
         <path id="cp">
