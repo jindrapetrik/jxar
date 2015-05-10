@@ -1052,7 +1052,7 @@ public class Xar {
         }
     }
 
-    public byte[] getFileData(String name, OutputStream out) {
+    public byte[] getFileData(String name) {
         if (!allNodes.containsKey(name)) {
             return null;
         }
