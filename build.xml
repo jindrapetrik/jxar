@@ -40,6 +40,9 @@
         <classpath path="${test.lib.dir}/jacocoant.jar"/>
     </taskdef>
         
+    <taskdef classname="org.testng.TestNGAntTask" classpath="${test.lib.dir}/testng-6.8.jar" name="testng" />
+        
+        
     <target name="compile">
         <mkdir dir="${compile.dir}"/>
         <mkdir dir="${lib.dir}" />
@@ -76,7 +79,6 @@
         <mkdir dir="${test.result.dir}"/>
         <mkdir dir="${test.result.dir}/raw/"/>
                 
-        <taskdef classname="org.testng.TestNGAntTask" classpath="${test.lib.dir}/testng-6.8.jar" name="testng" />
         <mkdir dir="${coverage.dir}" />
         <jacoco:coverage destfile="${coverage.dir}/jacoco.exec">
             <testng outputDir="${test.result.dir}" haltOnFailure="true" verbose="2" workingDir="${basedir}">
@@ -89,10 +91,7 @@
                     <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
                 </classpath>
                 <jvmarg value="-noverify" />
-                <jvmarg value="-Demma.coverage.out.file=${coverage.dir}/coverage.emma"/>
-                <jvmarg value="-Demma.coverage.out.merge=true"/>
-                <classfileset dir="${compile.test.dir}" includes="**/*.class" />                        
-            
+                <classfileset dir="${compile.test.dir}" includes="**/*.class" />                                    
             </testng>                
         </jacoco:coverage>
         <!-- Coverage report -->
