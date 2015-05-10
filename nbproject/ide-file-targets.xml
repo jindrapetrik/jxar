@@ -12,15 +12,18 @@
     </target>
     <target depends="compile-tests" name="run-selected-file-in-test">
         <fail unless="run.class">Must set property 'run.class'</fail>
-        <!--<java classname="${run.class}" failonerror="true" fork="true">
+        <java classname="${run.class}" failonerror="true" fork="true">
             <classpath>
                 <fileset dir="${basedir}" includes="lib/**/*.jar"/>
                 <pathelement location="build/classes"/>
                 <pathelement location="build/test"/>
             </classpath>
-        </java>-->
-        <loadresource property="run.file">
-            <string value="${run.class}"/>
+        </java>
+    </target>
+    <target depends="compile-tests" name="test-selected-file">
+        <fail unless="test.class">Must set property 'test.class'</fail>      
+        <loadresource property="test.file">
+            <string value="${test.class}"/>
             <filterchain>
                 <replaceregex flags="g" pattern="\." replace="/"/>
                 <replaceregex pattern="$" replace=".class"/>
@@ -35,10 +38,33 @@
                 <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
             </classpath>
             <jvmarg value="-noverify"/>
-            <classfileset dir="${compile.test.dir}" includes="${run.file}"/>
+            <classfileset dir="${compile.test.dir}" includes="${test.file}"/>
         </testng>
     </target>
-    <target depends="compile-tests" name="debug-selected-file-in-test">
+    
+    <target depends="compile-tests" name="test-selected-method">
+        <fail unless="test.class">Must set property 'test.class'</fail>      
+        <loadresource property="test.file">
+            <string value="${test.class}"/>
+            <filterchain>
+                <replaceregex flags="g" pattern="\." replace="/"/>
+                <replaceregex pattern="$" replace=".class"/>
+            </filterchain>
+        </loadresource>
+        <testng haltOnFailure="true" outputDir="${test.result.dir}" verbose="2" workingDir="${basedir}" methods="${test.class}.${method}">
+            <classpath>
+                <pathelement path="${compile.test.dir}"/>
+                <pathelement path="${instr.dir}"/>
+                <pathelement path="${compile.dir}"/>
+                <fileset dir="${lib.dir}" includes="**/*.jar"/>
+                <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
+            </classpath>
+            <jvmarg value="-noverify"/>
+            <classfileset dir="${compile.test.dir}" includes="${test.file}" />
+        </testng>
+    </target>
+    
+    <target depends="compile-tests" name="test-debug-selected-file">
         <fail unless="debug.class">Must set property 'debug.class'</fail>
         <delete dir="${test.result.dir}"/>
         <mkdir dir="${test.result.dir}"/>
@@ -49,12 +75,7 @@
                 <fileset dir="${lib.dir}" includes="**/*.jar"/>
                 <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
             </classpath>
-        </nbjpdastart>
-        <!--<java classname="${debug.class}" fork="true">
-            <classpath refid="cp"/>
-            <jvmarg value="-Xdebug"/>
-            <jvmarg value="-Xrunjdwp:transport=dt_socket,address=${jpda.address}"/>
-        </java>-->
+        </nbjpdastart>        
         <loadresource property="debug.file">
             <string value="${debug.class}"/>
             <filterchain>
@@ -65,7 +86,6 @@
         <testng haltOnFailure="true" outputDir="${test.result.dir}" verbose="2" workingDir="${basedir}">
             <classpath>
                 <pathelement path="${compile.test.dir}"/>
-                <pathelement path="${instr.dir}"/>
                 <pathelement path="${compile.dir}"/>
                 <fileset dir="${lib.dir}" includes="**/*.jar"/>
                 <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
@@ -75,6 +95,64 @@
             <jvmarg value="-Xrunjdwp:transport=dt_socket,address=${jpda.address}"/>
             <classfileset dir="${compile.test.dir}" includes="${debug.file}"/>
         </testng>
+    </target>
+    
+    <target depends="compile-tests" name="test-debug-selected-method">
+        <fail unless="debug.class">Must set property 'debug.class'</fail>
+        <delete dir="${test.result.dir}"/>
+        <mkdir dir="${test.result.dir}"/>
+        <mkdir dir="${test.result.dir}/raw/"/>
+        <nbjpdastart addressproperty="jpda.address" name="ffdec" transport="dt_socket">
+            <classpath id="cp">
+                <pathelement path="${compile.dir}"/>
+                <fileset dir="${lib.dir}" includes="**/*.jar"/>
+                <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
+            </classpath>
+        </nbjpdastart>        
+        <loadresource property="debug.file">
+            <string value="${debug.class}"/>
+            <filterchain>
+                <replaceregex flags="g" pattern="\." replace="/"/>
+                <replaceregex pattern="$" replace=".class"/>
+            </filterchain>
+        </loadresource>
+        <testng haltOnFailure="true" outputDir="${test.result.dir}" verbose="2" workingDir="${basedir}" methods="${debug.class}.${method}">
+            <classpath>
+                <pathelement path="${compile.test.dir}"/>
+                <pathelement path="${compile.dir}"/>
+                <fileset dir="${lib.dir}" includes="**/*.jar"/>
+                <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
+            </classpath>
+            <jvmarg value="-noverify"/>
+            <jvmarg value="-Xdebug"/>
+            <jvmarg value="-Xrunjdwp:transport=dt_socket,address=${jpda.address}"/>
+            <classfileset dir="${compile.test.dir}" includes="${debug.file}"/>
+        </testng>
+    </target>
+    
+    <target depends="compile-tests" name="debug-selected-file-in-test">
+        <fail unless="debug.class">Must set property 'debug.class'</fail>
+        <delete dir="${test.result.dir}"/>
+        <mkdir dir="${test.result.dir}"/>
+        <mkdir dir="${test.result.dir}/raw/"/>
+        <nbjpdastart addressproperty="jpda.address" name="ffdec" transport="dt_socket">
+            <classpath>
+                <pathelement path="${compile.dir}"/>
+                <pathelement path="${compile.test.dir}"/>
+                <fileset dir="${lib.dir}" includes="**/*.jar"/>
+                <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
+            </classpath>
+        </nbjpdastart>
+        <java classname="${debug.class}" fork="true">
+            <classpath>
+                <pathelement path="${compile.dir}"/>
+                <pathelement path="${compile.test.dir}"/>
+                <fileset dir="${lib.dir}" includes="**/*.jar"/>
+                <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
+            </classpath>
+            <jvmarg value="-Xdebug"/>
+            <jvmarg value="-Xrunjdwp:transport=dt_socket,address=${jpda.address}"/>
+        </java>        
     </target>
     <target depends="compile" name="debug-selected-file-in-src">
         <fail unless="debug.class">Must set property 'debug.class'</fail>
@@ -106,5 +184,6 @@
             </classpath>
             <jvmarg line="${agent.jvmargs}"/>
         </java>
-    </target>   
+    </target>  
+    
 </project>
