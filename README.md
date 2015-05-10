@@ -66,3 +66,6 @@ https://code.google.com/p/jbzip2/
 
 ##LZMA compression
 LZMA compression is currently unsupported. Maybe in the future.
+
+## What else is missing
+Symbolic links and other node types than directory/file.
