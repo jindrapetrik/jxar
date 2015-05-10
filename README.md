@@ -1,5 +1,5 @@
 # jxar
-Java port of eXtensible ARchiver
+Java port of eXtensible ARchiver (XAR)
 
 Original source: https://code.google.com/p/xar/
 
