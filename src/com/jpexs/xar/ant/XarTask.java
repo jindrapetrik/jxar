@@ -14,6 +14,7 @@ import org.apache.tools.ant.types.FileSet;
 import org.apache.tools.ant.types.TarFileSet;
 
 /**
+ * Ant task for creating XAR archives
  *
  * @author JPEXS
  */

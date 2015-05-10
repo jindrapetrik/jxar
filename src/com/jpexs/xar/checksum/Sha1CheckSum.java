@@ -6,9 +6,9 @@ import com.jpexs.xar.Xar;
  *
  * @author JPEXS
  */
-public class SHA1CheckSum extends DigestBasedChecksum {
+public class Sha1CheckSum extends DigestBasedChecksum {
 
-    public SHA1CheckSum() {
+    public Sha1CheckSum() {
         super("sha1", "SHA-1");
     }
 

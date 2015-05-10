@@ -89,19 +89,19 @@ auxiliary.show.customizer.message=<message>
             </view>
             <subprojects/>
         </general-data>
-        <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/3">
+        <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/4">
             <compilation-unit>
                 <package-root>src</package-root>
                 <classpath mode="compile">lib/jbzip2-0.9.1.jar;lib/ant.jar</classpath>
                 <built-to>build/classes</built-to>
-                <source-level>1.7</source-level>
+                <source-level>1.8</source-level>
             </compilation-unit>
             <compilation-unit>
                 <package-root>test</package-root>
                 <unit-tests/>
                 <classpath mode="compile">testlib/testng-6.8.jar;lib/jbzip2-0.9.1.jar;build/classes</classpath>
                 <built-to>build/test</built-to>
-                <source-level>1.7</source-level>
+                <source-level>1.8</source-level>
             </compilation-unit>
         </java-data>
     </configuration>

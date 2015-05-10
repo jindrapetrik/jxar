@@ -1,25 +1,28 @@
 package com.jpexs.xar;
 
+import com.jpexs.commandline.Commandline;
 import com.jpexs.xar.checksum.CheckSum;
 import com.jpexs.xar.checksum.errorhandlers.CheckSumErrorHandler;
 import com.jpexs.xar.checksum.MD5CheckSum;
 import com.jpexs.xar.checksum.NoCheckSum;
-import com.jpexs.xar.checksum.SHA1CheckSum;
+import com.jpexs.xar.checksum.Sha1CheckSum;
 import com.jpexs.xar.checksum.errorhandlers.WarningCheckSumErrorHandler;
 import com.jpexs.xar.encoding.BZip2Encoding;
 import com.jpexs.xar.encoding.Encoding;
 import com.jpexs.xar.encoding.GZipEncoding;
 import com.jpexs.xar.encoding.NoEncoding;
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
@@ -31,16 +34,16 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Formatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 import javax.xml.parsers.ParserConfigurationException;
@@ -61,6 +64,8 @@ import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * XAR - eXtensible ARchiver
+ *
+ * Based on https://code.google.com/p/xar/
  *
  * @author JPEXS
  */
@@ -104,7 +109,7 @@ public class Xar {
         supportedChecksums.put(c.getName(), c);
         c = new MD5CheckSum();
         supportedChecksums.put(c.getName(), c);
-        c = new SHA1CheckSum();
+        c = new Sha1CheckSum();
         supportedChecksums.put(c.getName(), c);
 
         Encoding e;
@@ -607,11 +612,11 @@ public class Xar {
         }
 
         if (!supportedEncodings.containsKey(enc_alg)) {
-            throw new RuntimeException("Uknown encoding type: " + enc_alg);
+            throw new IllegalArgumentException("Uknown encoding type: " + enc_alg);
         }
 
         if (!supportedChecksums.containsKey(cksum_alg)) {
-            throw new RuntimeException("Uknown checksum type: " + cksum_alg);
+            throw new IllegalArgumentException("Uknown checksum type: " + cksum_alg);
         }
 
         this.creationTime = new Date().getTime();
@@ -843,8 +848,170 @@ public class Xar {
         }
     }
 
-    public static void main(String[] args) throws IOException {
+    private static void dumpTextResource(String name) {
+        try {
+            InputStream is = Xar.class.getClassLoader().getResourceAsStream("com/jpexs/xar/" + name + ".txt");
+            if (is == null) {
+                throw new IOException();
+            }
+            BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.err.println(line);
+            }
+        } catch (IOException ex) {
+            System.err.println("Error: Cannot read " + name);
+        }
+    }
 
+    public static String getVersion() {
+        Properties p = new Properties();
+        try {
+            p.load(Xar.class.getClassLoader().getResourceAsStream("app.properties"));
+        } catch (IOException ex) {
+            //ignore
+        }
+        return p.getProperty("version", "uknown");
+    }
+
+    public static void main(String[] args) throws IOException {
+        final Commandline ap = new Commandline();
+        ap.addOption("c", "Creates an archive", "", (String option, Object[] values, String[] valuesStr) -> {
+            String archive = ap.getOptionStrValue("f");
+            String files[] = ap.getArgumentStrValues();
+            String compression = ap.getOptionStrValue("compression", "gzip");
+            String tocCksum = ap.getOptionStrValue("toc-cksum", "sha1");
+            if (!Arrays.asList("sha1", "md5", "none").contains(tocCksum)) {
+                throw new IllegalArgumentException("Uknown checksum: " + tocCksum);
+            }
+            if (!Arrays.asList("gzip", "bzip2", "none").contains(compression)) {
+                throw new IllegalArgumentException("Uknown compression: " + compression);
+            }
+
+            Xar x = new Xar(compression, tocCksum);
+            for (String f : files) {
+                try {
+                    File file = new File(f);
+                    if (file.isDirectory()) {
+                        x.addDirectory(f);
+                    } else {
+                        x.addFile(f, file);
+                    }
+                } catch (IOException ex) {
+                    System.err.println("Cannot read \"" + f + "\": " + ex.getMessage());
+                }
+            }
+
+            String dumTocFile = ap.getOptionStrValue("dump-toc");
+            if (dumTocFile != null) {
+                try (FileWriter fw = new FileWriter(dumTocFile)) {
+                    fw.write(x.getToc());
+                } catch (IOException ex) {
+                    System.err.println("Cannot write TOC to \"" + dumTocFile + "\": " + ex.getMessage());
+                    System.exit(1);
+                }
+            }
+            try {
+                x.save(new File(archive));
+            } catch (IOException ex) {
+                System.err.println("Cannot write \"" + archive + "\": " + ex.getMessage());
+                System.exit(1);
+            }
+            System.exit(0);
+
+        }, Commandline.REQUIRED_YES);
+
+        ap.addOption("x", "Extracts an archive", "", (String option, Object[] values, String[] valuesStr) -> {
+            String archive = ap.getOptionStrValue("f");
+            String targets[] = ap.getArgumentStrValues();
+            if (targets.length == 0) {
+                targets = new String[]{"."};
+            }
+            Xar x = null;
+            try {
+                x = new Xar(new File(archive));
+
+            } catch (IOException ex) {
+                System.err.println("Cannot read \"" + archive + "\": " + ex.getMessage());
+                System.exit(1);
+            }
+
+            String dumTocFile = ap.getOptionStrValue("dump-toc");
+            if (dumTocFile != null) {
+                try (FileWriter fw = new FileWriter(dumTocFile)) {
+                    fw.write(x.getToc());
+                } catch (IOException ex) {
+                    System.err.println("Cannot write TOC to \"" + dumTocFile + "\": " + ex.getMessage());
+                    System.exit(1);
+                }
+            }
+
+            try {
+                x.extract(new File(targets[0]));
+                System.exit(0);
+            } catch (IOException ex) {
+                System.err.println("Error extracting \"" + archive + "\": " + ex.getMessage());
+                System.exit(1);
+            }
+            System.exit(0);
+        },
+                Commandline.REQUIRED_YES);
+
+        ap.addOption("t", "Lists an archive", "", (String option, Object[] values, String[] valuesStr) -> {
+            String archive = ap.getOptionStrValue("f");
+            Xar x = null;
+            try {
+                x = new Xar(new File(archive));
+            } catch (IOException ex) {
+                System.err.println("Cannot read \"" + archive + "\": " + ex.getMessage());
+                System.exit(1);
+            }
+            String dumTocFile = ap.getOptionStrValue("dump-toc");
+            if (dumTocFile != null) {
+                try (FileWriter fw = new FileWriter(dumTocFile)) {
+                    fw.write(x.getToc());
+                } catch (IOException ex) {
+                    System.err.println("Cannot write TOC to \"" + dumTocFile + "\": " + ex.getMessage());
+                    System.exit(1);
+                }
+            }
+            x.printTree(System.out);
+            System.exit(0);
+        },
+                Commandline.REQUIRED_YES);
+
+        ap.addOption("f", "Specifies an archive to operate on [REQUIRED!]", "s<archive>", null, Commandline.REQUIRED_YES);
+        //ap.addOption("v", "Print filenames as they are archived");
+        //ap.addOption("n", "Provides a name for a subdocument", "s<name>");
+        //ap.addOption("s", "On extract, specifies the file to extract subdocuments to.\nOn archival, specifies an xml file to add as a subdocument.", "s<filename>");
+        //ap.addOption("l", "On archival, stay on the local device.");
+        //ap.addOption("p", "On extract, set ownership based on symbolic names, if possible.");
+        //ap.addOption("P", "On extract, set ownership based on uid/gid.");
+        ap.addOption("toc-cksum", "Specifies the hashing algorithm to use for xml header verification.\n"
+                + "Valid values: none, sha1, and md5\n"
+                + "Default: sha1", "s<algorithm>");
+        ap.addOption("dump-toc", "Has xar dump the xml header into the specified file.", "s<filename>");
+        //ap.addOption("dump-header", "Prints out the xar binary header information");
+        ap.addOption("compression", "Specifies the compression type to use.\n"
+                + "Valid values: none, gzip, bzip2\n"
+                + "Default: gzip", "s<type>");
+        //ap.addOption("list-subdocs", "List the subdocuments in the xml header");
+        //ap.addOption("extract-subdoc", "Extracts the specified subdocument to a document in cwd named <name>.xml", "s<subdoc>");
+        //ap.addOption("exclude", "POSIX regular expression of files to ignore while archiving.", "s<regexp>");
+        //ap.addOption("rsize", "Specifies the size of the buffer used for read IO operations in bytes.", "i<size>");
+        //ap.addOption("coalesce-heap", "When archived files are identical, only store one copy.\nThis option creates an archive which is not streamable");
+        //ap.addOption("link-same", "Hardlink identical files");
+        //ap.addOption("no-compress", "POSIX regular expression of files not to archive, but not compress.", "s<regexp>");
+        ap.addOption("version", "Print xar's version number", "", (String option, Object[] values, String[] valuesStr) -> {
+            System.out.println("jxar " + getVersion());
+        }, Commandline.REQUIRED_ALONE
+        );
+
+        ap.disableOptionsTogether("c", "x", "t");
+
+        ap.setArgTypes("s<file>*");
+        ap.setAppCommandline("java -jar jxar.jar");
+        ap.parseArgs(args);
     }
 
     public String[] listDirs() {
