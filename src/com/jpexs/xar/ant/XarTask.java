@@ -1,6 +1,7 @@
 package com.jpexs.xar.ant;
 
 import com.jpexs.xar.Xar;
+import com.jpexs.xar.nodes.Node;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -87,10 +88,6 @@ public class XarTask {
             String fullPath = fs.getFullpath(project);
             String prefix = fs.getPrefix(project);
             String fileNames[] = getFileNames(fs);
-            archive.setGid(fs.getGid());
-            archive.setUid(fs.getUid());
-            archive.setUser(fs.getUserName());
-            archive.setGroup(fs.getGroup());
 
             for (int i = 0; i < fileNames.length; i++) {
                 String targetName;
@@ -102,8 +99,8 @@ public class XarTask {
                     targetName = prefix + fileName;
                 }
                 targetName = targetName.replace('\\', '/');
-                if (targetName.isEmpty()) {
-                    targetName = ".";
+                if (targetName.equals(".")) {
+                    targetName = "";
                 }
                 if (verbose) {
                     System.out.println("Xar: Adding \"" + targetName + "\" ...");
@@ -113,14 +110,17 @@ public class XarTask {
                 }
                 files.add(targetName);
                 File f = new File(fs.getDir(project).getAbsolutePath() + "/" + fileName);
-                if (f.isDirectory()) {
-                    archive.addDirectory(targetName);
-                } else {
-                    try {
-                        archive.addFile(targetName, f);
-                    } catch (IOException ex) {
-                        throw new BuildException("Xar: Cannot read \"" + f + "\"", ex);
-                    }
+                try {
+                    String baseName = targetName.contains("/") ? targetName.substring(targetName.lastIndexOf("/") + 1) : targetName;
+                    String baseDir = targetName.contains("/") ? targetName.substring(0, targetName.lastIndexOf("/")) : "";
+                    Node n = archive.add(baseDir, baseName, f);
+
+                    n.gid = fs.getGid();
+                    n.uid = fs.getUid();
+                    n.user = fs.getUserName();
+                    n.group = fs.getGroup();
+                } catch (IOException ex) {
+                    throw new BuildException("Xar: Cannot read \"" + f + "\"", ex);
                 }
             }
 

@@ -11,6 +11,9 @@ import com.jpexs.xar.encoding.BZip2Encoding;
 import com.jpexs.xar.encoding.Encoding;
 import com.jpexs.xar.encoding.GZipEncoding;
 import com.jpexs.xar.encoding.NoEncoding;
+import com.jpexs.xar.nodes.DirectoryNode;
+import com.jpexs.xar.nodes.FileNode;
+import com.jpexs.xar.nodes.Node;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -80,7 +83,7 @@ public class Xar {
     public static final int CKSUM_ALG_NUM_MD5 = 2;
     public static final int CKSUM_ALG_NUM_OTHER = 3;
 
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     private long currentOffset = 0;
 
@@ -163,7 +166,7 @@ public class Xar {
         this.group = group;
     }
 
-    private static String byteToHex(final byte[] hash) {
+    public static String byteToHex(final byte[] hash) {
         Formatter formatter = new Formatter();
         for (byte b : hash) {
             formatter.format("%02x", b);
@@ -261,20 +264,20 @@ public class Xar {
                     inData = true;
                     break;
                 case "file":
-
-                    ctime = 0;
-                    mtime = 0;
-                    atime = 0;
+                    ctime = -1;
+                    mtime = -1;
+                    atime = -1;
                     lastType = "";
                     lastName = "";
                     encodingStyle = "";
-                    group = "";
-                    user = "";
-                    uid = 0;
-                    gid = 0;
+                    group = null;
+                    user = null;
+                    uid = -1;
+                    gid = -1;
                     length = 0;
                     size = 0;
                     offset = 0;
+                    mode = null;
                     archivedCheckSum = "";
                     extractedCheckSum = "";
                     id = Integer.parseInt(attributes.getValue("id"));
@@ -298,7 +301,8 @@ public class Xar {
         private void addDir() {
             String baseDir = getPathString();
             path.push(nameStack.peek());
-            DirectoryNode dnode = new DirectoryNode(id, nameStack.peek());
+            DirectoryNode dnode = new DirectoryNode(nameStack.peek());
+            dnode.id = id;
             xar.allNodes.get(baseDir).subnodes.put(nameStack.peek(), dnode);
             xar.allNodes.put(getPathString(), dnode);
         }
@@ -371,7 +375,8 @@ public class Xar {
                         } catch (IOException ex) {
                             //ignore
                         }
-                        FileNode fnode = new FileNode(id, name, null, compressedData, encoding, ctime, mtime, atime, mode, group, gid, user, uid, checksum, offset);
+                        FileNode fnode = new FileNode(name, null, compressedData, encoding, checksum, offset, ctime, mtime, atime, mode, group, gid, user, uid);
+                        fnode.id = id;
                         if (!fnode.archivedChecksum.equals(archivedCheckSum) || !fnode.extractedChecksum.equals(extractedCheckSum)) {
                             path.push(name);
                             if (xar.checkSumErrorHandler != null) {
@@ -469,134 +474,6 @@ public class Xar {
 
     }
 
-    private abstract static class Node {
-
-        public int id;
-        public String name;
-        Map<String, Node> subnodes = new TreeMap<>();
-
-        public Node(int id, String name) {
-            this.id = id;
-            this.name = name;
-        }
-    }
-
-    private static class DirectoryNode extends Node {
-
-        public DirectoryNode(int id, String name) {
-            super(id, name);
-        }
-
-        @Override
-        public String toString() {
-            String ret = "<file id=\"" + id + "\">"
-                    + "<type>directory</type>"
-                    + "<name>" + name + "</name>";
-            for (String k : subnodes.keySet()) {
-                ret += subnodes.get(k);
-            }
-            ret += "</file>";
-            return ret;
-        }
-
-    }
-
-    private static class FileNode extends Node {
-
-        public byte[] data;
-        public byte[] compressedData;
-        public int length;
-        public int size;
-        public String encodingStyle;
-        public long offset;
-        public String archivedChecksum = "";
-        public String extractedChecksum = "";
-        public String cksum_alg;
-        public long ctime;
-        public long mtime;
-        public long atime;
-        public int gid;
-        public int uid;
-        public String mode;
-        public String user;
-        public String group;
-
-        @Override
-        public String toString() {
-
-            return "<file id=\"" + id + "\">"
-                    + "<data>"
-                    + "<length>" + length + "</length>"
-                    + "<encoding style=\"" + encodingStyle + "\" />"
-                    + "<offset>" + offset + "</offset>"
-                    + "<size>" + size + "</size>"
-                    + "<archived-checksum>" + archivedChecksum + "</archived-checksum>"
-                    + "<extracted-checksum>" + extractedChecksum + "</extracted-checksum>"
-                    + "</data>"
-                    + "<ctime>" + DATE_FORMAT.format(new Date(ctime)) + "</ctime>"
-                    + "<mtime>" + DATE_FORMAT.format(new Date(mtime)) + "</mtime>"
-                    + "<atime>" + DATE_FORMAT.format(new Date(atime)) + "</atime>"
-                    + "<group>" + group + "</group>"
-                    + "<gid>" + gid + "</gid>"
-                    + "<user>" + user + "</user>"
-                    + "<uid>" + uid + "</uid>"
-                    + "<mode>" + mode + "</mode>"
-                    + "<type>file</type>"
-                    + "<name>" + name + "</name>"
-                    + "</file>";
-        }
-
-        public FileNode(int id, String name, byte[] data, byte compressedData[], Encoding encoding, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid, CheckSum checksum, long offset) {
-            super(id, name);
-            if (data == null) {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                InputStream is = new ByteArrayInputStream(compressedData);
-                try {
-                    is = encoding.decodeInputStream(is);
-                    int cnt;
-                    byte buf[] = new byte[1024];
-                    while ((cnt = is.read(buf)) > 0) {
-                        baos.write(buf, 0, cnt);
-                    }
-                } catch (IOException ex) {
-                    //ignore
-                }
-                data = baos.toByteArray();
-            }
-            this.data = data;
-            if (compressedData == null) {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                OutputStream os = baos;
-                try {
-                    os = encoding.encodeOutputStream(os);
-                    os.write(data);
-                    os.close();
-                } catch (IOException ex) {
-                    //ignore
-                }
-                compressedData = baos.toByteArray();
-            }
-            this.encodingStyle = encoding.getName();
-            this.compressedData = compressedData;
-
-            this.uid = uid;
-            this.gid = gid;
-            this.user = user;
-            this.group = group;
-            this.mode = mode;
-            this.cksum_alg = checksum.getName();
-            this.offset = offset;
-            this.ctime = ctime;
-            this.atime = atime;
-            this.mtime = mtime;
-            length = compressedData.length;
-            size = data.length;
-            archivedChecksum = byteToHex(checksum.checkSum(compressedData));
-            extractedChecksum = byteToHex(checksum.checkSum(data));
-        }
-
-    }
-
     public Xar() {
         this("gzip");
     }
@@ -628,7 +505,10 @@ public class Xar {
     }
 
     private void putRoot() {
-        allNodes.put("", new DirectoryNode(last_file_id, ""));
+        DirectoryNode root = new DirectoryNode("");
+        root.id = last_file_id;
+
+        allNodes.put("", root);
     }
 
     public Xar(File file) throws IOException {
@@ -696,88 +576,65 @@ public class Xar {
         }
     }
 
-    public void addFile(String name, String data, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid) {
-        try {
-            addFile(name, data.getBytes("UTF-8"), ctime, mtime, atime, mode, group, gid, user, uid);
-        } catch (UnsupportedEncodingException ex) {
-            //ignored
-        }
-    }
-
-    public void addDirectory(String name) {
-        if (name.equals("")) {
+    public void addDirectory(String path) {
+        if (path.equals("")) {
             return;
         }
-        name = name.replace("\\", "/");
-        if (name.startsWith("/")) {
-            name = name.substring(1);
+        path = path.replace("\\", "/");
+        if (path.startsWith("/")) {
+            path = path.substring(1);
         }
 
-        String baseName = name.contains("/") ? name.substring(name.lastIndexOf("/") + 1) : name;
-        String baseDir = name.contains("/") ? name.substring(0, name.lastIndexOf("/")) : "";
+        String baseName = path.contains("/") ? path.substring(path.lastIndexOf("/") + 1) : path;
+        String baseDir = path.contains("/") ? path.substring(0, path.lastIndexOf("/")) : "";
 
         addDirectory(baseDir);
         if (!allNodes.get(baseDir).subnodes.containsKey(baseName)) {
             last_file_id++;
-            DirectoryNode dnode = new DirectoryNode(last_file_id, baseName);
+            DirectoryNode dnode = new DirectoryNode(baseName);
+            dnode.id = last_file_id;
             allNodes.get(baseDir).subnodes.put(baseName, dnode);
-            allNodes.put(name, dnode);
+            allNodes.put(path, dnode);
         }
 
     }
 
-    public void addFile(String name, byte[] data, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid) {
-        name = name.replace("\\", "/");
-        if (name.startsWith("/")) {
-            name = name.substring(1);
+    private static String normalizePath(String path) {
+        path = path.replace("\\", "/");
+        if (path.startsWith("/")) {
+            path = path.substring(1);
         }
-        String baseName = name.contains("/") ? name.substring(name.lastIndexOf("/") + 1) : name;
-        String baseDir = name.contains("/") ? name.substring(0, name.lastIndexOf("/")) : "";
+        if (path.endsWith("/")) {
+            path = path.substring(0, path.length() - 1);
+        }
+        return path;
+    }
 
-        addDirectory(baseDir);
-        if (!allNodes.get(baseDir).subnodes.containsKey(baseName)) {
+    public Node add(String baseDirPath, String name, File file) throws IOException {
+        return add(baseDirPath, Node.getInstance(name, file, checksum, encoding));
+    }
+
+    public Node add(String baseDirPath, Node node) {
+
+        baseDirPath = normalizePath(baseDirPath);
+        if (baseDirPath.isEmpty() && node.name.isEmpty()) {
+            return node;
+        }
+        addDirectory(baseDirPath);
+        if (!allNodes.get(baseDirPath).subnodes.containsKey(node.name)) {
             last_file_id++;
-            FileNode fnode = new FileNode(last_file_id, baseName, data, null, encoding, ctime, mtime, atime, mode, group, gid, user, uid, checksum, currentOffset);
-            currentOffset += fnode.length;
-            allNodes.put(name, fnode);
-            allNodes.get(baseDir).subnodes.put(baseName, fnode);
-            files.add(fnode);
+            node.id = last_file_id;
+            if (node instanceof FileNode) {
+                ((FileNode) node).offset = currentOffset;
+                currentOffset += ((FileNode) node).length;
+                files.add((FileNode) node);
+            }
+            String fullPath = baseDirPath.isEmpty() ? node.name : baseDirPath + "/" + node.name;
+            allNodes.put(fullPath, node);
+            allNodes.get(baseDirPath).subnodes.put(node.name, node);
+            return node;
         }
-    }
-
-    public void addFile(String name, File file) throws IOException {
-        addFile(name, file, group, gid, mode, user, uid);
-    }
-
-    public void addFile(String name, File file, String group, int gid, String mode, String user, int uid) throws IOException {
-        if (file.isDirectory()) {
-            throw new IOException("It's a directory!");
-        }
-        BasicFileAttributes attrs = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
-        addFile(name, file, attrs.creationTime().toMillis(), attrs.lastModifiedTime().toMillis(), attrs.lastAccessTime().toMillis(), mode, group, gid, user, uid);
-    }
-
-    public void addFile(String name, File file, long ctime, long mtime, long atime) throws IOException {
-        addFile(name, file, ctime, mtime, atime, mode, group, gid, user, uid);
-    }
-
-    public void addFile(String name, File file, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid) throws IOException {
-        if (file.isDirectory()) {
-            throw new IOException("It's a directory!");
-        }
-
-        addFile(name, new FileInputStream(file), ctime, mtime, atime, mode, group, gid, user, uid);
-    }
-
-    public void addFile(String name, InputStream is, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        byte[] buf = new byte[1024];
-        int cnt;
-        while ((cnt = is.read(buf)) > 0) {
-            baos.write(buf, 0, cnt);
-        }
-        is.close();
-        addFile(name, baos.toByteArray(), ctime, mtime, atime, mode, group, gid, user, uid);
+        return null;
     }
 
     public void save(File file) throws IOException {
@@ -811,6 +668,7 @@ public class Xar {
             for (FileNode f : files) {
                 daos.write(f.compressedData);
             }
+            daos.close();
         }
     }
 
@@ -892,11 +750,13 @@ public class Xar {
             for (String f : files) {
                 try {
                     File file = new File(f);
-                    if (file.isDirectory()) {
-                        x.addDirectory(f);
-                    } else {
-                        x.addFile(f, file);
+                    if (!file.exists()) {
+                        System.err.println("Cannot read \"" + f + "\"");
+                        continue;
                     }
+                    String path = normalizePath(file.getPath());
+                    String parentDir = path.contains("/") ? path.substring(0, path.lastIndexOf("/")) : "";
+                    x.add(parentDir, file.getName(), file);
                 } catch (IOException ex) {
                     System.err.println("Cannot read \"" + f + "\": " + ex.getMessage());
                 }
