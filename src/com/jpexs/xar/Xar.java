@@ -1,6 +1,7 @@
 package com.jpexs.xar;
 
 import com.jpexs.commandline.Commandline;
+import com.jpexs.commandline.OptionActionListener;
 import com.jpexs.xar.checksum.CheckSum;
 import com.jpexs.xar.checksum.errorhandlers.CheckSumErrorHandler;
 import com.jpexs.xar.checksum.MD5CheckSum;
@@ -93,7 +94,7 @@ public class Xar {
     private int last_file_id = 0;
     private CheckSum checksum;
     private Encoding encoding;
-    private String user = "root";
+    private String userName = "root";
     private String group = "root";
     private int gid = 80;
     private int uid = 0;
@@ -158,8 +159,8 @@ public class Xar {
         this.mode = mode;
     }
 
-    public void setUser(String user) {
-        this.user = user;
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public void setGroup(String group) {
@@ -593,6 +594,11 @@ public class Xar {
             last_file_id++;
             DirectoryNode dnode = new DirectoryNode(baseName);
             dnode.id = last_file_id;
+            dnode.gid = gid;
+            dnode.uid = uid;
+            dnode.group = group;
+            dnode.userName = userName;
+            dnode.mode = mode;
             allNodes.get(baseDir).subnodes.put(baseName, dnode);
             allNodes.put(path, dnode);
         }
@@ -632,6 +638,31 @@ public class Xar {
             String fullPath = baseDirPath.isEmpty() ? node.name : baseDirPath + "/" + node.name;
             allNodes.put(fullPath, node);
             allNodes.get(baseDirPath).subnodes.put(node.name, node);
+            if (node.gid == -1) {
+                node.gid = gid;
+            }
+            if (node.uid == -1) {
+                node.uid = uid;
+            }
+            if (node.group == null) {
+                node.group = group;
+            }
+            if (node.userName == null) {
+                node.userName = userName;
+            }
+            if (node.mode == null) {
+                node.mode = mode;
+            }
+
+            if (node.ctime == -1) {
+                node.ctime = creationTime;
+            }
+            if (node.mtime == -1) {
+                node.mtime = creationTime;
+            }
+            if (node.atime == -1) {
+                node.atime = creationTime;
+            }
             return node;
         }
         return null;
@@ -762,15 +793,6 @@ public class Xar {
                 }
             }
 
-            String dumTocFile = ap.getOptionStrValue("dump-toc");
-            if (dumTocFile != null) {
-                try (FileWriter fw = new FileWriter(dumTocFile)) {
-                    fw.write(x.getToc());
-                } catch (IOException ex) {
-                    System.err.println("Cannot write TOC to \"" + dumTocFile + "\": " + ex.getMessage());
-                    System.exit(1);
-                }
-            }
             try {
                 x.save(new File(archive));
             } catch (IOException ex) {
@@ -796,47 +818,26 @@ public class Xar {
                 System.exit(1);
             }
 
-            String dumTocFile = ap.getOptionStrValue("dump-toc");
-            if (dumTocFile != null) {
-                try (FileWriter fw = new FileWriter(dumTocFile)) {
-                    fw.write(x.getToc());
-                } catch (IOException ex) {
-                    System.err.println("Cannot write TOC to \"" + dumTocFile + "\": " + ex.getMessage());
-                    System.exit(1);
-                }
-            }
-
             try {
                 x.extract(new File(targets[0]));
-                System.exit(0);
             } catch (IOException ex) {
                 System.err.println("Error extracting \"" + archive + "\": " + ex.getMessage());
                 System.exit(1);
             }
-            System.exit(0);
         },
                 Commandline.REQUIRED_YES);
 
         ap.addOption("t", "Lists an archive", "", (String option, Object[] values, String[] valuesStr) -> {
-            String archive = ap.getOptionStrValue("f");
             Xar x = null;
+            String archive = ap.getOptionStrValue("f");
             try {
                 x = new Xar(new File(archive));
             } catch (IOException ex) {
                 System.err.println("Cannot read \"" + archive + "\": " + ex.getMessage());
                 System.exit(1);
             }
-            String dumTocFile = ap.getOptionStrValue("dump-toc");
-            if (dumTocFile != null) {
-                try (FileWriter fw = new FileWriter(dumTocFile)) {
-                    fw.write(x.getToc());
-                } catch (IOException ex) {
-                    System.err.println("Cannot write TOC to \"" + dumTocFile + "\": " + ex.getMessage());
-                    System.exit(1);
-                }
-            }
             x.printTree(System.out);
-            System.exit(0);
+
         },
                 Commandline.REQUIRED_YES);
 
@@ -850,7 +851,29 @@ public class Xar {
         ap.addOption("toc-cksum", "Specifies the hashing algorithm to use for xml header verification.\n"
                 + "Valid values: none, sha1, and md5\n"
                 + "Default: sha1", "s<algorithm>");
-        ap.addOption("dump-toc", "Has xar dump the xml header into the specified file.", "s<filename>");
+        ap.addOption("dump-toc", "Has xar dump the xml header into the specified file.", "s<filename>", new OptionActionListener() {
+
+            @Override
+            public void handleOption(String option, Object[] values, String[] valuesStr) {
+                Xar x = null;
+                String archive = ap.getOptionStrValue("f");
+                try {
+                    x = new Xar(new File(archive));
+                } catch (IOException ex) {
+                    System.err.println("Cannot read \"" + archive + "\": " + ex.getMessage());
+                    System.exit(1);
+                }
+                String dumTocFile = ap.getOptionStrValue("dump-toc");
+                if (dumTocFile != null) {
+                    try (FileWriter fw = new FileWriter(dumTocFile)) {
+                        fw.write(x.getToc());
+                    } catch (IOException ex) {
+                        System.err.println("Cannot write TOC to \"" + dumTocFile + "\": " + ex.getMessage());
+                        System.exit(1);
+                    }
+                }
+            }
+        }, Commandline.REQUIRED_ALONE);
         //ap.addOption("dump-header", "Prints out the xar binary header information");
         ap.addOption("compression", "Specifies the compression type to use.\n"
                 + "Valid values: none, gzip, bzip2\n"
@@ -868,10 +891,12 @@ public class Xar {
         );
 
         ap.disableOptionsTogether("c", "x", "t");
+        ap.disableOptionsTogether("c", "x", "t", "dump-toc");
 
         ap.setArgTypes("s<file>*");
         ap.setAppCommandline("java -jar jxar.jar");
         ap.parseArgs(args);
+        System.exit(0);
     }
 
     public String[] listDirs() {

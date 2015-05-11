@@ -27,7 +27,7 @@ public abstract class Node {
     public int gid;
     public int uid;
     public String mode;
-    public String user;
+    public String userName;
     public String group;
     public String type;
 
@@ -38,7 +38,7 @@ public abstract class Node {
         this.atime = -1;
         this.mode = null;
         this.group = null;
-        this.user = null;
+        this.userName = null;
         this.gid = -1;
         this.uid = -1;
         this.name = name;
@@ -48,7 +48,7 @@ public abstract class Node {
     public Node(int id, String name, String type, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid) {
         this.id = id;
         this.name = name;
-        this.user = user;
+        this.userName = user;
         this.group = group;
         this.gid = gid;
         this.uid = uid;
@@ -65,7 +65,7 @@ public abstract class Node {
                 + ((atime > -1) ? "<atime>" + Xar.DATE_FORMAT.format(new Date(atime)) + "</atime>" : "")
                 + ((group != null) ? "<group>" + group + "</group>" : "")
                 + ((gid > -1) ? "<gid>" + gid + "</gid>" : "")
-                + ((user != null) ? "<user>" + user + "</user>" : "")
+                + ((userName != null) ? "<user>" + userName + "</user>" : "")
                 + ((uid > -1) ? "<uid>" + uid + "</uid>" : "")
                 + ((mode != null) ? "<mode>" + mode + "</mode>" : "")
                 + "<type>" + type + "</type>"

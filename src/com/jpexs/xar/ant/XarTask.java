@@ -114,11 +114,18 @@ public class XarTask {
                     String baseName = targetName.contains("/") ? targetName.substring(targetName.lastIndexOf("/") + 1) : targetName;
                     String baseDir = targetName.contains("/") ? targetName.substring(0, targetName.lastIndexOf("/")) : "";
                     Node n = archive.add(baseDir, baseName, f);
-
-                    n.gid = fs.getGid();
-                    n.uid = fs.getUid();
-                    n.user = fs.getUserName();
-                    n.group = fs.getGroup();
+                    if (fs.hasGroupBeenSet()) {
+                        n.group = fs.getGroup();
+                    }
+                    if (fs.hasGroupIdBeenSet()) {
+                        n.gid = fs.getGid();
+                    }
+                    if (fs.hasUserIdBeenSet()) {
+                        n.uid = fs.getUid();
+                    }
+                    if (fs.hasUserNameBeenSet()) {
+                        n.userName = fs.getUserName();
+                    }
                 } catch (IOException ex) {
                     throw new BuildException("Xar: Cannot read \"" + f + "\"", ex);
                 }
