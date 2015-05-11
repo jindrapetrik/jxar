@@ -96,9 +96,9 @@ public class Xar {
     private Encoding encoding;
     private String userName = "root";
     private String group = "root";
-    private int gid = 80;
-    private int uid = 0;
-    private String mode = "0755";
+    private int defaultGid = 0;
+    private int defauiltUid = 0;
+    private int defaultMode = 0644;
     private long creationTime;
 
     private CheckSumErrorHandler checkSumErrorHandler;
@@ -147,23 +147,23 @@ public class Xar {
         return supportedChecksums.keySet();
     }
 
-    public void setGid(int gid) {
-        this.gid = gid;
+    public void setDefaultGid(int gid) {
+        this.defaultGid = gid;
     }
 
-    public void setUid(int uid) {
-        this.uid = uid;
+    public void setDefaultUid(int uid) {
+        this.defauiltUid = uid;
     }
 
-    public void setMode(String mode) {
-        this.mode = mode;
+    public void setDefaultMode(int mode) {
+        this.defaultMode = mode;
     }
 
-    public void setUserName(String userName) {
+    public void setDefaultUserName(String userName) {
         this.userName = userName;
     }
 
-    public void setGroup(String group) {
+    public void setDefaultGroup(String group) {
         this.group = group;
     }
 
@@ -181,14 +181,14 @@ public class Xar {
 
         protected Xar xar;
         private String textData = "";
-        long ctime = 0;
-        long mtime = 0;
-        long atime = 0;
-        int gid = 0;
-        int uid = 0;
+        long ctime = -1;
+        long mtime = -1;
+        long atime = -1;
+        int gid = -1;
+        int uid = -1;
         String group = "";
         String user = "";
-        String mode = "";
+        int mode = -1;
         String lastType = "";
         String lastName = "";
         int id = 0;
@@ -278,7 +278,7 @@ public class Xar {
                     length = 0;
                     size = 0;
                     offset = 0;
-                    mode = null;
+                    mode = -1;
                     archivedCheckSum = "";
                     extractedCheckSum = "";
                     id = Integer.parseInt(attributes.getValue("id"));
@@ -402,7 +402,7 @@ public class Xar {
                     nameStack.pop();
                     break;
                 case "mode":
-                    mode = textData;
+                    mode = Integer.parseInt(textData, 8);
                     break;
                 case "name":
                     nameStack.push(lastName = textData);
@@ -594,11 +594,11 @@ public class Xar {
             last_file_id++;
             DirectoryNode dnode = new DirectoryNode(baseName);
             dnode.id = last_file_id;
-            dnode.gid = gid;
-            dnode.uid = uid;
-            dnode.group = group;
-            dnode.userName = userName;
-            dnode.mode = mode;
+            /*dnode.gid = gid;
+             dnode.uid = uid;
+             dnode.group = group;
+             dnode.userName = userName;
+             dnode.mode = mode;*/
             allNodes.get(baseDir).subnodes.put(baseName, dnode);
             allNodes.put(path, dnode);
         }
@@ -639,10 +639,10 @@ public class Xar {
             allNodes.put(fullPath, node);
             allNodes.get(baseDirPath).subnodes.put(node.name, node);
             if (node.gid == -1) {
-                node.gid = gid;
+                node.gid = defaultGid;
             }
             if (node.uid == -1) {
-                node.uid = uid;
+                node.uid = defauiltUid;
             }
             if (node.group == null) {
                 node.group = group;
@@ -650,8 +650,8 @@ public class Xar {
             if (node.userName == null) {
                 node.userName = userName;
             }
-            if (node.mode == null) {
-                node.mode = mode;
+            if (node.mode == -1) {
+                node.mode = defaultMode;
             }
 
             if (node.ctime == -1) {

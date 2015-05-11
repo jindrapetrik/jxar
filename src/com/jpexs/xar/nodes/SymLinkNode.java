@@ -10,10 +10,10 @@ public class SymLinkNode extends Node {
     public String targetType;
 
     public SymLinkNode(String name, String targetType, String link) {
-        this(name, targetType, link, -1, -1, -1, null, null, -1, null, -1);
+        this(name, targetType, link, -1, -1, -1, -1, null, -1, null, -1);
     }
 
-    public SymLinkNode(String name, String targetType, String link, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid) {
+    public SymLinkNode(String name, String targetType, String link, long ctime, long mtime, long atime, int mode, String group, int gid, String user, int uid) {
         super(-1, name, "symlink", ctime, mtime, atime, mode, group, gid, user, uid);
         this.link = link;
         this.targetType = targetType;

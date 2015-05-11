@@ -23,11 +23,11 @@ public class XarTask {
 
     private Project project;
     private boolean verbose = false;
-    private String encoding;
+    private String compression;
     private String checksum;
 
-    public void setEncoding(String encoding) {
-        this.encoding = encoding;
+    public void setCompression(String compression) {
+        this.compression = compression;
     }
 
     public void setChecksum(String checksum) {
@@ -81,7 +81,7 @@ public class XarTask {
         validate();
         System.out.println("Xar: Creating XAR archive to \"" + destFile + "\" ...");
         Set<String> files = new HashSet<>();
-        Xar archive = new Xar(encoding == null ? "gzip" : encoding, checksum == null ? "sha1" : checksum);
+        Xar archive = new Xar(compression == null ? "gzip" : compression, checksum == null ? "sha1" : checksum);
 
         for (TarFileSet fs : filesets) {
 
@@ -110,6 +110,10 @@ public class XarTask {
                 }
                 files.add(targetName);
                 File f = new File(fs.getDir(project).getAbsolutePath() + "/" + fileName);
+                if (f.isDirectory()) {
+                    //no empty directories, sorry...
+                    continue;
+                }
                 try {
                     String baseName = targetName.contains("/") ? targetName.substring(targetName.lastIndexOf("/") + 1) : targetName;
                     String baseDir = targetName.contains("/") ? targetName.substring(0, targetName.lastIndexOf("/")) : "";
@@ -125,6 +129,11 @@ public class XarTask {
                     }
                     if (fs.hasUserNameBeenSet()) {
                         n.userName = fs.getUserName();
+                    }
+                    if (f.isDirectory()) {
+                        if (fs.hasDirModeBeenSet()) {
+                            n.mode = fs.getDirMode(project);
+                        }
                     }
                 } catch (IOException ex) {
                     throw new BuildException("Xar: Cannot read \"" + f + "\"", ex);

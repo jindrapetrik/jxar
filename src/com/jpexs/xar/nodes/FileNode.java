@@ -41,7 +41,7 @@ public class FileNode extends Node {
                 + "</file>";
     }
 
-    public FileNode(String name, InputStream is, Encoding encoding, CheckSum checksum, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid) throws IOException {
+    public FileNode(String name, InputStream is, Encoding encoding, CheckSum checksum, long ctime, long mtime, long atime, int mode, String group, int gid, String user, int uid) throws IOException {
         super(-1, name, "file", ctime, mtime, atime, mode, group, gid, user, uid);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] buf = new byte[1024];
@@ -54,7 +54,7 @@ public class FileNode extends Node {
     }
 
     public FileNode(String name, byte[] data, byte compressedData[], Encoding encoding, CheckSum checksum, long offset) {
-        this(name, data, compressedData, encoding, checksum, offset, -1, -1, -1, null, null, -1, null, -1);
+        this(name, data, compressedData, encoding, checksum, offset, -1, -1, -1, -1, null, -1, null, -1);
     }
 
     private void init(byte[] data, byte compressedData[], Encoding encoding, CheckSum checksum, long offset) {
@@ -97,7 +97,7 @@ public class FileNode extends Node {
         extractedChecksum = Xar.byteToHex(checksum.checkSum(data));
     }
 
-    public FileNode(String name, byte[] data, byte compressedData[], Encoding encoding, CheckSum checksum, long offset, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid) {
+    public FileNode(String name, byte[] data, byte compressedData[], Encoding encoding, CheckSum checksum, long offset, long ctime, long mtime, long atime, int mode, String group, int gid, String user, int uid) {
         super(-1, name, "file", ctime, mtime, atime, mode, group, gid, user, uid);
         init(data, compressedData, encoding, checksum, offset);
     }

@@ -10,7 +10,7 @@ public class DirectoryNode extends Node {
         super(-1, name, "directory");
     }
 
-    public DirectoryNode(String name, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid) {
+    public DirectoryNode(String name, long ctime, long mtime, long atime, int mode, String group, int gid, String user, int uid) {
         super(-1, name, "directory", ctime, mtime, atime, mode, group, gid, user, uid);
     }
 

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Date;
+import java.util.Formatter;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -18,6 +19,7 @@ import java.util.TreeMap;
  */
 public abstract class Node {
 
+    Formatter FMT = new Formatter();
     public int id;
     public String name;
     public Map<String, Node> subnodes = new TreeMap<>();
@@ -26,7 +28,7 @@ public abstract class Node {
     public long atime;
     public int gid;
     public int uid;
-    public String mode;
+    public int mode;
     public String userName;
     public String group;
     public String type;
@@ -36,7 +38,7 @@ public abstract class Node {
         this.ctime = -1;
         this.mtime = -1;
         this.atime = -1;
-        this.mode = null;
+        this.mode = -1;
         this.group = null;
         this.userName = null;
         this.gid = -1;
@@ -45,7 +47,7 @@ public abstract class Node {
         this.type = type;
     }
 
-    public Node(int id, String name, String type, long ctime, long mtime, long atime, String mode, String group, int gid, String user, int uid) {
+    public Node(int id, String name, String type, long ctime, long mtime, long atime, int mode, String group, int gid, String user, int uid) {
         this.id = id;
         this.name = name;
         this.userName = user;
@@ -67,7 +69,7 @@ public abstract class Node {
                 + ((gid > -1) ? "<gid>" + gid + "</gid>" : "")
                 + ((userName != null) ? "<user>" + userName + "</user>" : "")
                 + ((uid > -1) ? "<uid>" + uid + "</uid>" : "")
-                + ((mode != null) ? "<mode>" + mode + "</mode>" : "")
+                + ((mode > -1) ? "<mode>" + FMT.format("%04o", mode) + "</mode>" : "")
                 + "<type>" + type + "</type>"
                 + "<name>" + name + "</name>";
     }
@@ -79,11 +81,11 @@ public abstract class Node {
         long atime = attrs.lastAccessTime().toMillis();
         if (attrs.isSymbolicLink()) {
             String linkTarget = Files.readSymbolicLink(file.toPath()).toFile().getAbsolutePath();
-            return new SymLinkNode(name, file.isDirectory() ? "directory" : "file", linkTarget, ctime, mtime, atime, null, null, -1, null, -1);
+            return new SymLinkNode(name, file.isDirectory() ? "directory" : "file", linkTarget, ctime, mtime, atime, -1, null, -1, null, -1);
         } else if (file.isDirectory()) {
-            return new DirectoryNode(name, ctime, mtime, atime, null, null, -1, null, -1);
+            return new DirectoryNode(name, ctime, mtime, atime, -1, null, -1, null, -1);
         } else {
-            return new FileNode(name, new FileInputStream(file), encoding, checksum, ctime, mtime, atime, null, null, -1, null, -1);
+            return new FileNode(name, new FileInputStream(file), encoding, checksum, ctime, mtime, atime, -1, null, -1, null, -1);
         }
     }
 }
