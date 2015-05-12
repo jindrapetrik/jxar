@@ -38,15 +38,23 @@ byte[] data = x.getFileData("path/in/archive/test.txt"); //Get uncompressed data
 ### Writing
 ```java
 import com.jpexs.xar.Xar;
+import com.jpexs.xar.nodes.*;
 ...
 Xar x = new Xar(); //Use constructor parameter to change compression and/or checksum type
-x.addFile("dir1/file.txt",new File("localfile.txt"));  //Add text file
-x.addFile("dir1/file2.png",new File("localimage.png")); //Second file
+x.add("dir1/first","file.txt",new File("localfile.txt"));  //Add text file
+x.add("dir1/first","file2.png",new File("localimage.png")); //Second file
 x.addDirectory("dir2/mydir"); //Empty directory
-//Add file with some special permissions:
-x.addFile("special/script.sh",new File("script.sh"),"root",0,"0755","root",0); 
-//various addFile variants exists... with modify/create/access times too
 
+//Add file and modify permissions:
+Node node = x.add("dir2/special","script.sh",new File("script.sh")); 
+node.mode = 0777;
+node.group = "root";
+node.uid = 59;
+
+//Add symlink
+x.add("dir3",new SymLinkNode("mylink","directory","../dir1"));
+
+//Finally:
 x.save(new File("archive.xar"));  //Save to file
 
 ```
