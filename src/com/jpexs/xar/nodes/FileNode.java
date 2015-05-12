@@ -34,8 +34,8 @@ public class FileNode extends Node {
                 + "<encoding style=\"" + encodingStyle + "\" />"
                 + "<offset>" + offset + "</offset>"
                 + "<size>" + size + "</size>"
-                + "<archived-checksum>" + archivedChecksum + "</archived-checksum>"
-                + "<extracted-checksum>" + extractedChecksum + "</extracted-checksum>"
+                + "<archived-checksum style=\"" + cksum_alg + "\">" + archivedChecksum + "</archived-checksum>"
+                + "<extracted-checksum style=\"" + cksum_alg + "\">" + extractedChecksum + "</extracted-checksum>"
                 + "</data>"
                 + basicInfo()
                 + "</file>";

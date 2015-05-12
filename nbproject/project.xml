@@ -205,6 +205,15 @@ auxiliary.show.customizer.message=<message>
                     <source-file>
                         <location>build.properties</location>
                     </source-file>
+                    <source-file>
+                        <location>nbproject/project.xml</location>
+                    </source-file>
+                    <source-file>
+                        <location>nbproject/ide-file-targets.xml</location>
+                    </source-file>
+                    <source-file>
+                        <location>nbproject/ide-targets.xml</location>
+                    </source-file>
                 </items>
                 <context-menu>
                     <ide-action name="build"/>
