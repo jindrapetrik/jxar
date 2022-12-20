@@ -79,5 +79,5 @@ LZMA compression is currently unsupported. Maybe in the future.
 Symbolic links and other node types than directory/file.
 
 ## Authors
-Ported by Jindra Petřík aka JPEXS
-Original XAR written by Rob Braun.
+- Ported by Jindra Petřík aka JPEXS.
+- Original XAR written by Rob Braun.
