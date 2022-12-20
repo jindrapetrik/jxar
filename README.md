@@ -67,13 +67,17 @@ XAR archives creation only, using xar task:
     </xar>
 ```
 
-##Bzip2 compression
+## Bzip2 compression
 To enable Bzip2 compression, add JBZip2 to your class path. 
 You can download the library here:
 https://code.google.com/p/jbzip2/
 
-##LZMA compression
+## LZMA compression
 LZMA compression is currently unsupported. Maybe in the future.
 
 ## What else is missing
 Symbolic links and other node types than directory/file.
+
+## Authors
+Ported by Jindra Petřík aka JPEXS
+Original XAR written by Rob Braun.
